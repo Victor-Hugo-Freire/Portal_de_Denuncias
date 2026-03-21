@@ -1,0 +1,13 @@
+CREATE TABLE IF NOT EXISTS usuarios (
+  codigo CHAR(8) PRIMARY KEY ON DELETE CASCADE,
+  criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS denuncias (
+  id SERIAL PRIMARY KEY,
+  descricao TEXT NOT NULL,
+  categoria VARCHAR(100) NOT NULL,
+  status VARCHAR(30) NOT NULL DEFAULT 'pendente',
+  usuario_codigo CHAR(8) NOT NULL REFERENCES usuarios(codigo),
+  criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
