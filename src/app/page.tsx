@@ -1,14 +1,50 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Header from "../components/header";
 import Footer from "../components/footer";
+import Notification from "../components/notification";
 
 export default function Home() {
+  const [toast] = useState<{
+    type: "success" | "error";
+    title: string;
+    message: string;
+  } | null>(() => {
+    if (typeof window === "undefined") return null;
+    const saved = window.sessionStorage.getItem("denunciaNotification");
+    if (!saved) return null;
+    const parsed = JSON.parse(saved) as {
+      type: "success" | "error";
+      title: string;
+      message: string;
+    };
+    window.sessionStorage.removeItem("denunciaNotification");
+    return parsed;
+  });
+
+  const [userCode, setUserCode] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      return sessionStorage.getItem("userCode");
+    }
+    return null;
+  });
+  const [isLogged, setIsLogged] = useState(!!userCode);
+
+  useEffect(() => {
+    const handler = () => {
+      const code = sessionStorage.getItem("userCode");
+      setUserCode(code);
+      setIsLogged(!!code);
+    };
+    window.addEventListener("authChange", handler);
+    return () => window.removeEventListener("authChange", handler);
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col">
-      <Header
-        showMakeComplaintButton={true}
-        showCodeButton={true}
-        isLoggedIn={false}
-      />
+      <Header showMakeComplaintButton={true} showCodeButton={true} />
+      {toast ? <Notification notification={toast} /> : null}
       <main className="flex-1 text-black px-4 py-6">
         <div className="max-w-4xl mx-auto bg-gray-300 rounded-lg p-8 space-y-4">
           <p className="text-xl text-center font-bold">

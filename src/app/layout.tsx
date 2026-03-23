@@ -1,8 +1,9 @@
 import "./globals.css";
 import { Roboto, Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
+import { AuthProvider } from "../context/auth-context";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 const roboto = Roboto({
   weight: ["400", "700"],
@@ -16,7 +17,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className={cn("font-sans", geist.variable)}>
-      <body className={roboto.className}>{children}</body>
+      <body className={roboto.className}>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }
