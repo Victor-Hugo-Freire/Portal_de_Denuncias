@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
 
     const client = await pool.connect();
     const result = await client.query(
-      "SELECT id, categoria, data_ocorrencia, estado, cidade, bairro, descricao, status FROM denuncias WHERE usuario_codigo = $1 ORDER BY data_ocorrencia DESC",
+      "SELECT d.id, c.nome as categoria, d.data_ocorrencia, d.estado, d.cidade, d.endereco, d.descricao, d.status FROM denuncias d JOIN categorias c ON d.categoria_id = c.id WHERE d.usuario_codigo = $1 ORDER BY d.data_ocorrencia DESC",
       [code],
     );
     client.release();

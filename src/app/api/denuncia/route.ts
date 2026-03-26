@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       data_ocorrencia,
       estado,
       cidade,
-      bairro,
+      endereco,
       descricao,
     } = await request.json();
 
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       !data_ocorrencia ||
       !estado ||
       !cidade ||
-      !bairro ||
+      !endereco ||
       !descricao
     ) {
       return NextResponse.json(
@@ -36,15 +36,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Buscar o ID da categoria
+    const catResult = await pool.query(
+      "SELECT id FROM categorias WHERE nome = $1",
+      [categoria],
+    );
+
+    if (catResult.rows.length === 0) {
+      return NextResponse.json(
+        { error: "Categoria inválida" },
+        { status: 400 },
+      );
+    }
+
+    const categoria_id = catResult.rows[0].id;
+
     const result = await pool.query(
-      "INSERT INTO denuncias (usuario_codigo, categoria, data_ocorrencia, estado, cidade, bairro, descricao) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
+      "INSERT INTO denuncias (usuario_codigo, categoria_id, data_ocorrencia, estado, cidade, endereco, descricao) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
       [
         usuario_codigo,
-        categoria,
+        categoria_id,
         data_ocorrencia,
         estado,
         cidade,
-        bairro,
+        endereco,
         descricao,
       ],
     );

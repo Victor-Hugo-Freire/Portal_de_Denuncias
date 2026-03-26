@@ -1,11 +1,10 @@
 "use client";
-
-import { useState, useEffect } from "react";
 import Header from "../components/header";
 import Footer from "../components/footer";
 import Notification from "../components/notification";
+import { useState, useEffect, memo } from "react";
 
-export default function Home() {
+const Home = memo(function Home() {
   const [toast] = useState<{
     type: "success" | "error";
     title: string;
@@ -23,19 +22,16 @@ export default function Home() {
     return parsed;
   });
 
-  const [userCode, setUserCode] = useState<string | null>(() => {
+  const [userCode] = useState<string | null>(() => {
     if (typeof window !== "undefined") {
       return sessionStorage.getItem("userCode");
     }
     return null;
   });
-  const [isLogged, setIsLogged] = useState(!!userCode);
 
   useEffect(() => {
     const handler = () => {
-      const code = sessionStorage.getItem("userCode");
-      setUserCode(code);
-      setIsLogged(!!code);
+      // O estado é gerenciado pelo contexto
     };
     window.addEventListener("authChange", handler);
     return () => window.removeEventListener("authChange", handler);
@@ -89,4 +85,6 @@ export default function Home() {
       <Footer />
     </div>
   );
-}
+});
+
+export default Home;

@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/auth-context";
 import {
@@ -31,28 +31,18 @@ export default function Header({
     title: string;
     message: string;
   } | null>(null);
+  const [mounted, setMounted] = useState(false);
 
-  const [userCode, setUserCode] = useState<string | null>(() => {
-    if (typeof window !== "undefined") {
-      return sessionStorage.getItem("userCode");
-    }
-    return null;
-  });
-  const [isLogged, setIsLogged] = useState(!!userCode);
-
-  useEffect(() => {
-    const handler = () => {
-      const code = sessionStorage.getItem("userCode");
-      setUserCode(code);
-      setIsLogged(!!code);
-    };
-    window.addEventListener("authChange", handler);
-    return () => window.removeEventListener("authChange", handler);
-  }, []);
+  const auth = useAuth();
+  const { userCode, isLogged } = auth;
 
   const router = useRouter();
 
-  const handleLogin = async () => {
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const handleLogin = useCallback(async () => {
     if (loginCode.length !== 8) {
       setLoginError("O código deve ter 8 caracteres");
       return;
@@ -72,10 +62,7 @@ export default function Header({
         return;
       }
 
-      sessionStorage.setItem("userCode", loginCode);
-      setUserCode(loginCode);
-      setIsLogged(true);
-      window.dispatchEvent(new CustomEvent("authChange"));
+      auth.login(loginCode);
       setDialogOpen(false);
       setLoginCode("");
       setLoginError("");
@@ -88,13 +75,10 @@ export default function Header({
     } catch {
       setLoginError("Erro ao conectar ao servidor");
     }
-  };
+  }, [loginCode, auth]);
 
-  const handleLogout = () => {
-    sessionStorage.removeItem("userCode");
-    setUserCode(null);
-    setIsLogged(false);
-    window.dispatchEvent(new CustomEvent("authChange"));
+  const handleLogout = useCallback(() => {
+    auth.logout();
     setDropdownOpen(false);
     setNotification({
       type: "success",
@@ -102,7 +86,7 @@ export default function Header({
       message: "Você saiu da conta.",
     });
     setTimeout(() => setNotification(null), 5000);
-  };
+  }, [auth]);
 
   return (
     <header className="w-full h-16 bg-gray-300 flex items-center justify-between px-4">
@@ -118,71 +102,73 @@ export default function Header({
         <Notification notification={notification} />
         <button
           onClick={() => router.push("/acompanhar")}
-          className="px-3 py-1.5 bg-white text-black rounded-md border border-gray-400 hover:bg-gray-100 transition"
+          className="px-3 py-1.5 bg-white text-black rounded-md border border-gray-400 hover:bg-gray-100 transition cursor-pointer"
         >
           Acompanhar denúncias
         </button>
         {showMakeComplaintButton && (
           <button
             onClick={() => router.push("/denuncia")}
-            className="px-3 py-1.5 bg-white text-black rounded-md border border-gray-400 hover:bg-gray-100 transition"
+            className="px-3 py-1.5 bg-white text-black rounded-md border border-gray-400 hover:bg-gray-100 transition cursor-pointer"
           >
             Fazer denúncia
           </button>
         )}
-        {isLogged ? (
-          <div className="relative">
-            <button
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-              className="px-3 py-1.5 bg-white text-black rounded-md border border-gray-400 hover:bg-gray-100 transition"
-            >
-              {userCode} ▼
-            </button>
-            {dropdownOpen && (
-              <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-400 rounded-md shadow-lg">
-                <button
-                  onClick={handleLogout}
-                  className="w-full text-left px-3 py-2 hover:bg-gray-100"
-                >
-                  Logout
-                </button>
-              </div>
-            )}
-          </div>
-        ) : (
-          showCodeButton && (
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger className="px-3 py-1.5 bg-white text-black rounded-md border border-gray-400 hover:bg-gray-100 transition">
-                Já tem um código?
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Entrar com código</DialogTitle>
-                </DialogHeader>
-                <p>
-                  Insira seu código de 8 caracteres para acessar suas denúncias.
-                </p>
-                <input
-                  type="text"
-                  maxLength={8}
-                  placeholder="ABC12345"
-                  value={loginCode}
-                  onChange={(e) => setLoginCode(e.target.value.toUpperCase())}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                />
-                {loginError && (
-                  <p className="text-red-500 text-sm">{loginError}</p>
-                )}
-                <button
-                  onClick={handleLogin}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                >
-                  Entrar
-                </button>
-              </DialogContent>
-            </Dialog>
-          )
-        )}
+        {mounted &&
+          (isLogged ? (
+            <div className="relative">
+              <button
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                className="px-3 py-1.5 bg-white text-black rounded-md border border-gray-400 hover:bg-gray-100 transition cursor-pointer"
+              >
+                {userCode} ▼
+              </button>
+              {dropdownOpen && (
+                <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-400 rounded-md shadow-lg">
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            showCodeButton && (
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger className="px-3 py-1.5 bg-white text-black rounded-md border border-gray-400 hover:bg-gray-100 transition cursor-pointer">
+                  Já tem um código?
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Entrar com código</DialogTitle>
+                  </DialogHeader>
+                  <p>
+                    Insira seu código de 8 caracteres para acessar suas
+                    denúncias.
+                  </p>
+                  <input
+                    type="text"
+                    maxLength={8}
+                    placeholder="ABC12345"
+                    value={loginCode}
+                    onChange={(e) => setLoginCode(e.target.value.toUpperCase())}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  />
+                  {loginError && (
+                    <p className="text-red-500 text-sm">{loginError}</p>
+                  )}
+                  <button
+                    onClick={handleLogin}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 cursor-pointer"
+                  >
+                    Entrar
+                  </button>
+                </DialogContent>
+              </Dialog>
+            )
+          ))}
       </div>
     </header>
   );

@@ -2,9 +2,9 @@
 
 import Header from "../../components/header";
 import Footer from "../../components/footer";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 
-export default function AcompanharPage() {
+const AcompanharPage = memo(function AcompanharPage() {
   const [userCode, setUserCode] = useState<string | null>(() => {
     if (typeof window !== "undefined") {
       return sessionStorage.getItem("userCode");
@@ -14,35 +14,48 @@ export default function AcompanharPage() {
   const [isLogged, setIsLogged] = useState(!!userCode);
   const [denuncias, setDenuncias] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const handler = () => {
-      const code = sessionStorage.getItem("userCode");
-      setUserCode(code);
-      setIsLogged(!!code);
-    };
-    window.addEventListener("authChange", handler);
-    return () => window.removeEventListener("authChange", handler);
+    setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (isLogged && userCode) {
-      setLoading(true);
-      fetch("/api/acompanhar", {
+  const handleAuthChange = useCallback(() => {
+    const code = sessionStorage.getItem("userCode");
+    setUserCode(code);
+    setIsLogged(!!code);
+  }, []);
+
+  const fetchDenuncias = useCallback(async () => {
+    if (!userCode) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/acompanhar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: userCode }),
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.denuncias) {
-            setDenuncias(data.denuncias);
-          }
-        })
-        .catch((error) => console.error("Erro ao buscar denúncias:", error))
-        .finally(() => setLoading(false));
+      });
+      const data = await res.json();
+      if (data.denuncias) {
+        setDenuncias(data.denuncias);
+      }
+    } catch (error) {
+      console.error("Erro ao buscar denúncias:", error);
+    } finally {
+      setLoading(false);
     }
-  }, [isLogged, userCode]);
+  }, [userCode]);
+
+  useEffect(() => {
+    window.addEventListener("authChange", handleAuthChange);
+    return () => window.removeEventListener("authChange", handleAuthChange);
+  }, [handleAuthChange]);
+
+  useEffect(() => {
+    if (isLogged && userCode) {
+      fetchDenuncias();
+    }
+  }, [isLogged, userCode, fetchDenuncias]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -93,4 +106,6 @@ export default function AcompanharPage() {
       <Footer />
     </div>
   );
-}
+});
+
+export default AcompanharPage;

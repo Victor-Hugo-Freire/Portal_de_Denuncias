@@ -22,6 +22,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== "undefined") {
       window.sessionStorage.setItem("userCode", code);
     }
+    window.dispatchEvent(new CustomEvent("authChange"));
   };
 
   const logout = () => {
@@ -29,6 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== "undefined") {
       window.sessionStorage.removeItem("userCode");
     }
+    window.dispatchEvent(new CustomEvent("authChange"));
   };
 
   return (

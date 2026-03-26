@@ -2,6 +2,7 @@
 
 import { CheckCircle, XCircle } from "lucide-react";
 import { Alert, AlertTitle, AlertDescription } from "../../components/ui/alert";
+import { memo } from "react";
 
 interface NotificationProps {
   notification: {
@@ -11,7 +12,9 @@ interface NotificationProps {
   } | null;
 }
 
-export default function Notification({ notification }: NotificationProps) {
+const Notification = memo(function Notification({
+  notification,
+}: NotificationProps) {
   if (!notification) return null;
 
   return (
@@ -38,4 +41,6 @@ export default function Notification({ notification }: NotificationProps) {
       </Alert>
     </div>
   );
-}
+});
+
+export default Notification;
