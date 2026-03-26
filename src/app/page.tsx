@@ -22,13 +22,6 @@ const Home = memo(function Home() {
     return parsed;
   });
 
-  const [userCode] = useState<string | null>(() => {
-    if (typeof window !== "undefined") {
-      return sessionStorage.getItem("userCode");
-    }
-    return null;
-  });
-
   useEffect(() => {
     const handler = () => {
       // O estado é gerenciado pelo contexto
@@ -48,6 +41,20 @@ const Home = memo(function Home() {
             para relatar irregularidades e promover a transparência.
           </p>
 
+          <div className="bg-yellow-100 border-l-4 border-yellow-500 p-4 mb-6">
+            <div className="flex">
+              <div className="ml-3">
+                <p className="text-sm text-yellow-700">
+                  <strong>Importante:</strong> Ao fazer uma denúncia, você
+                  receberá um código único de 8 caracteres. Guarde este código
+                  com segurança! Ele é essencial para acompanhar o status da sua
+                  denúncia posteriormente. Sem ele, você não poderá verificar se
+                  sua denúncia foi processada.
+                </p>
+              </div>
+            </div>
+          </div>
+
           <h2 className="text-2xl font-semibold">Como Usar?</h2>
           <ul className="list-disc list-inside space-y-2">
             <li>
@@ -56,12 +63,16 @@ const Home = memo(function Home() {
             </li>
             <li>Preencha os detalhes da denúncia de forma anônima.</li>
             <li>
-              Envie a denúncia, que será analisada pelas autoridades
-              competentes.
+              Após enviar, você receberá um código único de 8 caracteres.{" "}
+              <strong>Guarde este código!</strong>
             </li>
             <li>
-              Use &quot;Acompanhar denúncias&quot; para verificar o status, se
-              aplicável.
+              Use &quot;Acompanhar denúncias&quot; e digite seu código para
+              verificar o status da sua denúncia.
+            </li>
+            <li>
+              Você será automaticamente redirecionado para acompanhar suas
+              denúncias após o envio.
             </li>
           </ul>
 

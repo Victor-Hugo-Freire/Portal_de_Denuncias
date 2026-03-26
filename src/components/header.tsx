@@ -16,11 +16,13 @@ import Notification from "./notification";
 interface HeaderProps {
   showMakeComplaintButton?: boolean;
   showCodeButton?: boolean;
+  showTrackingButton?: boolean;
 }
 
 export default function Header({
   showMakeComplaintButton = true,
   showCodeButton = true,
+  showTrackingButton = true,
 }: HeaderProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -100,12 +102,14 @@ export default function Header({
 
       <div className="flex items-center gap-1.5">
         <Notification notification={notification} />
-        <button
-          onClick={() => router.push("/acompanhar")}
-          className="px-3 py-1.5 bg-white text-black rounded-md border border-gray-400 hover:bg-gray-100 transition cursor-pointer"
-        >
-          Acompanhar denúncias
-        </button>
+        {showTrackingButton && (
+          <button
+            onClick={() => router.push("/acompanhar")}
+            className="px-3 py-1.5 bg-white text-black rounded-md border border-gray-400 hover:bg-gray-100 transition cursor-pointer"
+          >
+            Acompanhar denúncias
+          </button>
+        )}
         {showMakeComplaintButton && (
           <button
             onClick={() => router.push("/denuncia")}

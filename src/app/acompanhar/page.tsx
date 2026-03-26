@@ -2,39 +2,129 @@
 
 import Header from "../../components/header";
 import Footer from "../../components/footer";
+import Notification from "../../components/notification";
+import AdminPanel from "./admin-panel";
 import { useState, useEffect, useCallback, memo } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../../components/ui/table";
+import { useAuth } from "../../context/auth-context";
+
+function formatarData(dataISO: string): string {
+  try {
+    const data = new Date(dataISO);
+    return data.toLocaleDateString("pt-BR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+  } catch {
+    return dataISO;
+  }
+}
+
+type Denuncia = {
+  id: number;
+  categoria: string;
+  data_ocorrencia: string;
+  cidade: string;
+  estado: string;
+  descricao: string;
+  status: string | null;
+  usuario_codigo?: string;
+};
 
 const AcompanharPage = memo(function AcompanharPage() {
-  const [userCode, setUserCode] = useState<string | null>(() => {
-    if (typeof window !== "undefined") {
-      return sessionStorage.getItem("userCode");
-    }
-    return null;
-  });
-  const [isLogged, setIsLogged] = useState(!!userCode);
-  const [denuncias, setDenuncias] = useState<any[]>([]);
+  const auth = useAuth();
+  const { userCode, isLogged, login } = auth;
+  const [denuncias, setDenuncias] = useState<Denuncia[]>([]);
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [inputCode, setInputCode] = useState("");
+  const [notification, setNotification] = useState<{
+    type: "success" | "error";
+    title: string;
+    message: string;
+  } | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const handleAuthChange = useCallback(() => {
-    const code = sessionStorage.getItem("userCode");
-    setUserCode(code);
-    setIsLogged(!!code);
-  }, []);
+  const handleCodeSubmit = useCallback(async () => {
+    if (inputCode.length !== 8 && inputCode !== "ADM123654") {
+      setNotification({
+        type: "error",
+        title: "Código inválido",
+        message: "O código deve ter 8 caracteres.",
+      });
+      setTimeout(() => setNotification(null), 5000);
+      return;
+    }
+
+    // Passa para AdminPanel fazer a verificação
+    setIsAdmin(true);
+  }, [inputCode]);
+
+  const handleAdminCodeVerification = useCallback(
+    (adminDenuncias: Denuncia[]) => {
+      setDenuncias(adminDenuncias);
+    },
+    [],
+  );
+
+  const handleNormalLogin = useCallback(async () => {
+    try {
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: inputCode }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setNotification({
+          type: "error",
+          title: "Login falhou",
+          message: data.error || "Código inválido.",
+        });
+        setTimeout(() => setNotification(null), 5000);
+        setIsAdmin(false);
+        return;
+      }
+
+      login(inputCode);
+      setIsAdmin(false);
+      setNotification({
+        type: "success",
+        title: "Login realizado",
+        message: "Login efetuado com sucesso.",
+      });
+      setTimeout(() => setNotification(null), 5000);
+    } catch {
+      setNotification({
+        type: "error",
+        title: "Erro",
+        message: "Erro ao conectar ao servidor.",
+      });
+      setTimeout(() => setNotification(null), 5000);
+      setIsAdmin(false);
+    }
+  }, [inputCode, login]);
 
   const fetchDenuncias = useCallback(async () => {
     if (!userCode) return;
+
     setLoading(true);
     try {
-      const res = await fetch("/api/acompanhar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: userCode }),
-      });
+      const res = await fetch(`/api/acompanhar?code=${userCode}`);
       const data = await res.json();
       if (data.denuncias) {
         setDenuncias(data.denuncias);
@@ -47,59 +137,137 @@ const AcompanharPage = memo(function AcompanharPage() {
   }, [userCode]);
 
   useEffect(() => {
-    window.addEventListener("authChange", handleAuthChange);
-    return () => window.removeEventListener("authChange", handleAuthChange);
-  }, [handleAuthChange]);
+    if (isAdmin) {
+      return;
+    }
 
-  useEffect(() => {
     if (isLogged && userCode) {
       fetchDenuncias();
+    } else {
+      setDenuncias([]);
     }
-  }, [isLogged, userCode, fetchDenuncias]);
+  }, [isLogged, userCode, fetchDenuncias, isAdmin]);
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header showMakeComplaintButton={true} showCodeButton={true} />
+      <Header
+        showMakeComplaintButton={true}
+        showCodeButton={true}
+        showTrackingButton={false}
+      />
+      {notification && <Notification notification={notification} />}
       <main className="flex-1 bg-white text-black px-4 py-6">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-3xl font-bold mb-6">Acompanhar Denúncias</h1>
-          {isLogged ? (
+          {isAdmin ? (
             <>
-              <p className="mb-4">
-                Bem-vindo {userCode}! Aqui estão suas denúncias:
-              </p>
+              <AdminPanel
+                inputCode={inputCode}
+                onLoginSuccess={handleNormalLogin}
+                onAdminSuccess={handleAdminCodeVerification}
+              />
               {loading ? (
                 <p>Carregando...</p>
               ) : denuncias.length > 0 ? (
-                <div className="space-y-4">
-                  {denuncias.map((d) => (
-                    <div key={d.id} className="border p-4 rounded">
-                      <p>
-                        <strong>Categoria:</strong> {d.categoria}
-                      </p>
-                      <p>
-                        <strong>Data:</strong> {d.data_ocorrencia}
-                      </p>
-                      <p>
-                        <strong>Local:</strong> {d.cidade}, {d.estado}
-                      </p>
-                      <p>
-                        <strong>Descrição:</strong> {d.descricao}
-                      </p>
-                      <p>
-                        <strong>Status:</strong> {d.status || "Em análise"}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Usuário</TableHead>
+                      <TableHead>Categoria</TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Local</TableHead>
+                      <TableHead>Descrição</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {denuncias
+                      .sort((a, b) =>
+                        (a.usuario_codigo || "").localeCompare(
+                          b.usuario_codigo || "",
+                        ),
+                      )
+                      .map((d) => (
+                        <TableRow key={d.id}>
+                          <TableCell className="font-mono text-sm">
+                            {d.usuario_codigo}
+                          </TableCell>
+                          <TableCell>{d.categoria}</TableCell>
+                          <TableCell>
+                            {formatarData(d.data_ocorrencia)}
+                          </TableCell>
+                          <TableCell>
+                            {d.cidade}, {d.estado}
+                          </TableCell>
+                          <TableCell className="max-w-xs truncate">
+                            {d.descricao}
+                          </TableCell>
+                          <TableCell>{d.status || "Em análise"}</TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <p>Nenhuma denúncia encontrada.</p>
+              )}
+            </>
+          ) : isLogged ? (
+            <>
+              {loading ? (
+                <p>Carregando...</p>
+              ) : denuncias.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Categoria</TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Local</TableHead>
+                      <TableHead>Descrição</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {denuncias.map((d) => (
+                      <TableRow key={d.id}>
+                        <TableCell>{d.categoria}</TableCell>
+                        <TableCell>{formatarData(d.data_ocorrencia)}</TableCell>
+                        <TableCell>
+                          {d.cidade}, {d.estado}
+                        </TableCell>
+                        <TableCell className="max-w-xs truncate">
+                          {d.descricao}
+                        </TableCell>
+                        <TableCell>{d.status || "Em análise"}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               ) : (
                 <p>Você ainda não fez nenhuma denúncia.</p>
               )}
             </>
           ) : (
-            <p>
-              Faça login pelo código para acompanhar suas denúncias armazenadas.
-            </p>
+            <div className="space-y-4">
+              <p>
+                Digite seu código de 8 caracteres para acompanhar suas
+                denúncias:
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="ABC12345"
+                  value={inputCode}
+                  onChange={(e) => setInputCode(e.target.value.toUpperCase())}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
+                />
+                <button
+                  onClick={handleCodeSubmit}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 cursor-pointer"
+                >
+                  Acompanhar
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </main>

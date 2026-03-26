@@ -254,7 +254,7 @@ export default memo(function DenunciaPage() {
           message: `Denúncia enviada com sucesso. Seu código é ${codeToUse}. Guarde este código para acompanhar a situação de sua denúncia.`,
         }),
       );
-      router.push("/");
+      router.push("/acompanhar");
 
       setForm({
         categoria: "",
