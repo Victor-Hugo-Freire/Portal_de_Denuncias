@@ -24,6 +24,14 @@ function gerarCodigoUsuario() {
   ).join("");
 }
 
+function formatarTexto(texto: string): string {
+  return texto
+    .replace(/_/g, " ")
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 interface Municipio {
   id: number;
   nome: string;
@@ -35,7 +43,7 @@ interface Categoria {
 }
 
 export default memo(function DenunciaPage() {
-  const { userCode, isLogged, login } = useAuth();
+  const { userCode, isLogged, login, isAdmin } = useAuth();
   const [form, setForm] = useState({
     categoria: "",
     data: "",
@@ -55,7 +63,24 @@ export default memo(function DenunciaPage() {
   const [loadingCidades, setLoadingCidades] = useState(false);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loadingCategorias, setLoadingCategorias] = useState(true);
+  const categoriaSelecionadaLabel =
+    categorias.find((cat) => cat.value === form.categoria)?.label || "";
   const router = useRouter();
+
+  useEffect(() => {
+    if (isAdmin) {
+      sessionStorage.setItem(
+        "denunciaNotification",
+        JSON.stringify({
+          type: "error",
+          title: "Acesso negado",
+          message:
+            "Você não deve acessar a página de denúncia como administrador.",
+        }),
+      );
+      router.push("/");
+    }
+  }, [isAdmin, router]);
 
   const handleCategoriaChange = useCallback((value: string | null) => {
     setForm((prev) => ({ ...prev, categoria: value ?? "" }));
@@ -63,7 +88,16 @@ export default memo(function DenunciaPage() {
 
   const handleDataChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      setForm((prev) => ({ ...prev, data: e.target.value }));
+      const selectedDate = e.target.value;
+      const today = new Date().toISOString().split("T")[0];
+      const isInvalid = selectedDate > today;
+
+      setErrors((prev) => ({
+        ...prev,
+        data: isInvalid ? "A data não pode ser no futuro" : "",
+      }));
+
+      setForm((prev) => ({ ...prev, data: selectedDate }));
     },
     [],
   );
@@ -78,7 +112,8 @@ export default memo(function DenunciaPage() {
 
   const handleEnderecoChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      setForm((prev) => ({ ...prev, endereco: e.target.value }));
+      const value = e.target.value.slice(0, 50);
+      setForm((prev) => ({ ...prev, endereco: value }));
     },
     [],
   );
@@ -104,7 +139,13 @@ export default memo(function DenunciaPage() {
           "https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome",
         );
         const data = await response.json();
-        setEstados(data);
+        const estadosFormatados = data.map(
+          (estado: { id: number; nome: string }) => ({
+            id: estado.id,
+            nome: formatarTexto(estado.nome),
+          }),
+        );
+        setEstados(estadosFormatados);
       } catch (error) {
         console.error("Erro ao carregar estados:", error);
       }
@@ -118,7 +159,11 @@ export default memo(function DenunciaPage() {
       try {
         const response = await fetch("/api/categorias");
         const data = await response.json();
-        setCategorias(data);
+        const categoriasFormatadas = data.map((cat: Categoria) => ({
+          value: cat.value,
+          label: formatarTexto(cat.label),
+        }));
+        setCategorias(categoriasFormatadas);
       } catch (error) {
         console.error("Erro ao carregar categorias:", error);
       } finally {
@@ -144,7 +189,11 @@ export default memo(function DenunciaPage() {
           const sorted = (data as Municipio[]).sort((a, b) =>
             a.nome.localeCompare(b.nome),
           );
-          setMunicipios(sorted);
+          const municipiosFormatados = sorted.map((municipio) => ({
+            id: municipio.id,
+            nome: formatarTexto(municipio.nome),
+          }));
+          setMunicipios(municipiosFormatados);
           setForm((s) => ({ ...s, cidade: "" }));
         } catch (error) {
           console.error("Erro ao carregar municípios:", error);
@@ -216,6 +265,9 @@ export default memo(function DenunciaPage() {
     if (!isLogged || !codeToUse) {
       codeToUse = gerarCodigoUsuario();
       login(codeToUse);
+
+      // Aguardar um tick para garantir que o estado seja atualizado
+      await new Promise((resolve) => setTimeout(resolve, 0));
     }
 
     try {
@@ -298,13 +350,13 @@ export default memo(function DenunciaPage() {
                 <SelectTrigger
                   className={`${errors.categoria ? "border-red-500" : "border-gray-400"} border-2 focus:border-black focus:ring-2 focus:ring-black/10 cursor-pointer w-full`}
                 >
-                  <SelectValue
-                    placeholder={
-                      loadingCategorias
+                  <SelectValue>
+                    {form.categoria
+                      ? categoriaSelecionadaLabel
+                      : loadingCategorias
                         ? "Carregando..."
-                        : "Selecione uma categoria"
-                    }
-                  />
+                        : "Selecione uma categoria"}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {categorias.map((cat) => (
@@ -328,6 +380,7 @@ export default memo(function DenunciaPage() {
                   type="date"
                   value={form.data}
                   onChange={handleDataChange}
+                  max={new Date().toISOString().split("T")[0]}
                   className={`${errors.data ? "border-red-500" : "border-gray-400"} border-2 focus:border-black focus:ring-2 focus:ring-black/10`}
                 />
                 {errors.data && (
@@ -407,7 +460,7 @@ export default memo(function DenunciaPage() {
                   }`}
                 />
                 <p className="text-gray-500 text-xs">
-                  {form.endereco.length} caracteres
+                  {form.endereco.length}/50 caracteres
                 </p>
                 {errors.endereco && (
                   <p className="text-red-600 text-sm">{errors.endereco}</p>

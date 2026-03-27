@@ -3,37 +3,42 @@ import Header from "../components/header";
 import Footer from "../components/footer";
 import Notification from "../components/notification";
 import { useState, useEffect, memo } from "react";
+import { useAuth } from "../context/auth-context";
 
 const Home = memo(function Home() {
-  const [toast] = useState<{
+  const [toast, setToast] = useState<{
     type: "success" | "error";
     title: string;
     message: string;
-  } | null>(() => {
-    if (typeof window === "undefined") return null;
-    const saved = window.sessionStorage.getItem("denunciaNotification");
-    if (!saved) return null;
-    const parsed = JSON.parse(saved) as {
-      type: "success" | "error";
-      title: string;
-      message: string;
-    };
-    window.sessionStorage.removeItem("denunciaNotification");
-    return parsed;
-  });
+  } | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const { isAdmin } = useAuth();
 
   useEffect(() => {
-    const handler = () => {
-      // O estado é gerenciado pelo contexto
-    };
+    setMounted(true);
+    // Verificar se há notificação salva no sessionStorage
+    const saved = window.sessionStorage.getItem("denunciaNotification");
+    if (saved) {
+      const parsed = JSON.parse(saved) as {
+        type: "success" | "error";
+        title: string;
+        message: string;
+      };
+      setToast(parsed);
+      window.sessionStorage.removeItem("denunciaNotification");
+    }
+  }, []);
+
+  useEffect(() => {
+    const handler = () => {};
     window.addEventListener("authChange", handler);
     return () => window.removeEventListener("authChange", handler);
   }, []);
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header showMakeComplaintButton={true} showCodeButton={true} />
-      {toast ? <Notification notification={toast} /> : null}
+      <Header showMakeComplaintButton={!isAdmin} showCodeButton={true} />
+      {mounted && toast ? <Notification notification={toast} /> : null}
       <main className="flex-1 text-black px-4 py-6">
         <div className="max-w-4xl mx-auto bg-gray-300 rounded-lg p-8 space-y-4">
           <p className="text-xl text-center font-bold">
