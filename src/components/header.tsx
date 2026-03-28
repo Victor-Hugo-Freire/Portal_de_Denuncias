@@ -2,7 +2,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "../context/auth-context";
 import {
   Dialog,
@@ -26,6 +26,7 @@ export default function Header({
 }: HeaderProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const [loginCode, setLoginCode] = useState("");
   const [loginError, setLoginError] = useState("");
   const [notification, setNotification] = useState<{
@@ -35,6 +36,7 @@ export default function Header({
   } | null>(null);
 
   const router = useRouter();
+  const pathname = usePathname();
   const auth = useAuth();
   const { userCode, isLogged, isAdmin } = auth;
 
@@ -51,8 +53,20 @@ export default function Header({
     router.push(`/acompanhar?code=${loginCode}`);
   }, [loginCode, router]);
 
-  const handleLogout = useCallback(() => {
+  const handleDialogOpenChange = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open) {
+      setLoginCode("");
+      setLoginError("");
+    }
+
+    const eventName = open ? "acompanhardialogopen" : "acompanhardialogclose";
+    window.dispatchEvent(new Event(eventName));
+  };
+
+  const performLogout = useCallback(() => {
     auth.logout();
+    window.dispatchEvent(new Event("authLogout"));
     setDropdownOpen(false);
     setNotification({
       type: "success",
@@ -60,7 +74,17 @@ export default function Header({
       message: "Você saiu da conta.",
     });
     setTimeout(() => setNotification(null), 5000);
-  }, [auth]);
+    window.history.replaceState(null, "", "/acompanhar");
+    router.replace("/acompanhar");
+  }, [auth, router]);
+
+  const handleLogout = useCallback(() => {
+    if (isAdmin) {
+      setLogoutDialogOpen(true);
+    } else {
+      performLogout();
+    }
+  }, [isAdmin, performLogout]);
 
   return (
     <header className="w-full h-16 bg-gray-300 flex items-center justify-between px-4">
@@ -82,6 +106,14 @@ export default function Header({
             Acompanhar denúncias
           </button>
         )}
+        {isAdmin && pathname === "/acompanhar" && (
+          <button
+            onClick={() => window.print()}
+            className="px-2 py-1 bg-blue-500 text-white rounded-md border border-blue-600 hover:bg-blue-600 transition cursor-pointer text-sm"
+          >
+            Gerar Relatório
+          </button>
+        )}
         {showMakeComplaintButton && (
           <button
             onClick={() => router.push("/denuncia")}
@@ -91,12 +123,39 @@ export default function Header({
           </button>
         )}
         {isAdmin ? (
-          <button
-            onClick={handleLogout}
-            className="px-3 py-1.5 bg-white text-black rounded-md border border-gray-400 hover:bg-gray-100 transition cursor-pointer"
-          >
-            Logout
-          </button>
+          <>
+            <button
+              onClick={handleLogout}
+              className="px-3 py-1.5 bg-white text-black rounded-md border border-gray-400 hover:bg-gray-100 transition cursor-pointer"
+            >
+              Logout
+            </button>
+            <Dialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Confirmar logout</DialogTitle>
+                </DialogHeader>
+                <p>Você realmente deseja sair da conta de administrador?</p>
+                <div className="mt-4 flex justify-end gap-2">
+                  <button
+                    onClick={() => setLogoutDialogOpen(false)}
+                    className="px-3 py-1.5 bg-gray-200 rounded-md hover:bg-gray-300"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => {
+                      performLogout();
+                      setLogoutDialogOpen(false);
+                    }}
+                    className="px-3 py-1.5 bg-red-500 text-white rounded-md hover:bg-red-600"
+                  >
+                    Confirmar
+                  </button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </>
         ) : isLogged ? (
           <div className="relative">
             <button
@@ -118,7 +177,7 @@ export default function Header({
           </div>
         ) : (
           showCodeButton && (
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
               <DialogTrigger className="px-3 py-1.5 bg-white text-black rounded-md border border-gray-400 hover:bg-gray-100 transition cursor-pointer">
                 Já tem um código?
               </DialogTrigger>

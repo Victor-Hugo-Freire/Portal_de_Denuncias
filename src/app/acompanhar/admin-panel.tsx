@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useAuth } from "../../context/auth-context";
 
 interface Denuncia {
@@ -28,19 +28,41 @@ export default function AdminPanel({
   onAdminSuccess,
   onError,
 }: AdminPanelProps) {
-  const [processed, setProcessed] = useState(false);
+  const processedCodeRef = useRef("");
+  const skipNextCheckRef = useRef(false);
   const auth = useAuth();
-
-  // Resetar quando código muda
-  useEffect(() => {
-    setProcessed(false);
-  }, [inputCode]);
+  const { userCode, isAdmin } = auth;
 
   useEffect(() => {
-    if (!inputCode || processed) return;
+    if (!isAdmin && !userCode) {
+      processedCodeRef.current = "";
+    }
+
+    const handleLogout = () => {
+      // sempre forçar reprocessar o próximo valor de code
+      skipNextCheckRef.current = false;
+      processedCodeRef.current = "";
+    };
+
+    window.addEventListener("authLogout", handleLogout);
+    return () => window.removeEventListener("authLogout", handleLogout);
+  }, [isAdmin, userCode, inputCode]);
+
+  useEffect(() => {
+    if (!inputCode) return;
+
+    const shouldSkip =
+      (inputCode === processedCodeRef.current &&
+        (isAdmin || userCode === inputCode)) ||
+      skipNextCheckRef.current;
+
+    if (shouldSkip) {
+      skipNextCheckRef.current = false;
+      return;
+    }
 
     const handleCodeVerification = async () => {
-      setProcessed(true);
+      processedCodeRef.current = inputCode;
 
       if (inputCode === "ADM123654") {
         try {
@@ -78,7 +100,15 @@ export default function AdminPanel({
     };
 
     handleCodeVerification();
-  }, [inputCode, processed, onLoginSuccess, onAdminSuccess, onError, auth]);
+  }, [
+    inputCode,
+    onLoginSuccess,
+    onAdminSuccess,
+    onError,
+    isAdmin,
+    userCode,
+    auth,
+  ]);
 
   return null;
 }

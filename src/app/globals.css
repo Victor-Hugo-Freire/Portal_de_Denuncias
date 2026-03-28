@@ -169,3 +169,9 @@ body {
 .animate-alert-out {
   animation: alert-out 0.25s ease-in forwards;
 }
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}

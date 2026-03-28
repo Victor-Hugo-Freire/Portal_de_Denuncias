@@ -27,6 +27,8 @@ const Home = memo(function Home() {
       setToast(parsed);
       window.sessionStorage.removeItem("denunciaNotification");
     }
+    // Definir título da página
+    document.title = "Portal de Denúncias";
   }, []);
 
   useEffect(() => {

@@ -56,9 +56,12 @@ const AcompanharPage = memo(function AcompanharPage() {
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [inputCode, setInputCode] = useState("");
+  const [selectedUserCode, setSelectedUserCode] = useState<string | null>(null);
+  const [ignoreQueryCode, setIgnoreQueryCode] = useState(false);
   const searchParams = useSearchParams();
   const router = useRouter();
-  const codeFromQuery = searchParams.get("code") || "";
+  const rawCodeFromQuery = searchParams.get("code") || "";
+  const codeFromQuery = ignoreQueryCode ? "" : rawCodeFromQuery;
 
   const [notification, setNotification] = useState<{
     type: "success" | "error";
@@ -79,7 +82,25 @@ const AcompanharPage = memo(function AcompanharPage() {
       window.sessionStorage.removeItem("denunciaNotification");
       setTimeout(() => setNotification(null), 5000);
     }
+    // Definir título para a página
+    document.title = "Acompanhar Denúncias";
+
+    const clearInput = () => setInputCode("");
+    window.addEventListener("acompanhardialogopen", clearInput);
+    window.addEventListener("acompanhardialogclose", clearInput);
+
+    return () => {
+      window.removeEventListener("acompanhardialogopen", clearInput);
+      window.removeEventListener("acompanhardialogclose", clearInput);
+    };
   }, []);
+
+  // Limpar input quando usuário faz login ou logout
+  useEffect(() => {
+    if (isLogged || isAdmin) {
+      setInputCode("");
+    }
+  }, [isLogged, isAdmin]);
 
   const handleCodeSubmit = useCallback(
     (code?: string) => {
@@ -158,17 +179,136 @@ const AcompanharPage = memo(function AcompanharPage() {
     }
   }, [mounted, isAdmin, denuncias.length]);
 
+  useEffect(() => {
+    if (!isLogged && !isAdmin) {
+      setSelectedUserCode(null);
+      setDenuncias([]);
+      setInputCode("");
+    }
+  }, [isLogged, isAdmin]);
+
+  useEffect(() => {
+    const handleLogoutEvent = () => {
+      setSelectedUserCode(null);
+      setDenuncias([]);
+      setInputCode("");
+      setIgnoreQueryCode(true);
+      router.replace("/acompanhar");
+      window.history.replaceState(null, "", "/acompanhar");
+    };
+
+    window.addEventListener("authLogout", handleLogoutEvent);
+    return () => {
+      window.removeEventListener("authLogout", handleLogoutEvent);
+    };
+  }, [router]);
+
+  useEffect(() => {
+    if (ignoreQueryCode && !rawCodeFromQuery) {
+      setIgnoreQueryCode(false);
+    }
+  }, [ignoreQueryCode, rawCodeFromQuery]);
+
   return (
     <div className="min-h-screen flex flex-col">
-      <Header
-        showMakeComplaintButton={!isAdmin}
-        showCodeButton={true}
-        showTrackingButton={false}
-      />
+      <style jsx>{`
+        @media print {
+          .no-print {
+            display: none !important;
+          }
+          body {
+            font-size: 12px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: auto;
+            overflow: visible;
+          }
+          th,
+          td {
+            border: 1px solid #000;
+            padding: 4px;
+            word-wrap: break-word;
+            white-space: normal;
+            max-width: none;
+          }
+          .table-fixed {
+            table-layout: auto !important;
+            width: 100% !important;
+          }
+          .max-w-xs,
+          .max-w-md,
+          .min-w-80 {
+            max-width: none !important;
+            min-width: auto !important;
+          }
+          .wrap-break-word {
+            word-wrap: break-word;
+            white-space: normal;
+          }
+          body,
+          html,
+          .min-h-screen,
+          main {
+            overflow-x: hidden !important;
+            overflow: visible !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          main {
+            padding: 0 !important;
+          }
+          -webkit-print-color-adjust: exact;
+          .table-fixed {
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          th:nth-child(1),
+          td:nth-child(1) {
+            width: 8%;
+          } /* Usuário */
+          th:nth-child(2),
+          td:nth-child(2) {
+            width: 10%;
+          } /* Categoria */
+          th:nth-child(3),
+          td:nth-child(3) {
+            width: 8%;
+          } /* Data */
+          th:nth-child(4),
+          td:nth-child(4) {
+            width: 15%;
+            word-break: break-word;
+            font-size: 10px;
+          } /* Cidade e Estado */
+          th:nth-child(5),
+          td:nth-child(5) {
+            width: 25%;
+          } /* Endereço */
+          th:nth-child(6),
+          td:nth-child(6) {
+            width: 30%;
+          } /* Descrição */
+          th:nth-child(7),
+          td:nth-child(7) {
+            width: 12%;
+          } /* Status */
+        }
+      `}</style>
+      <div className="no-print">
+        <Header
+          showMakeComplaintButton={!isAdmin}
+          showCodeButton={true}
+          showTrackingButton={false}
+        />
+      </div>
       <AdminPanel
         inputCode={codeFromQuery}
         onLoginSuccess={(code) => {
           login(code);
+          setSelectedUserCode(null);
           setNotification({
             type: "success",
             title: "Login realizado",
@@ -178,6 +318,7 @@ const AcompanharPage = memo(function AcompanharPage() {
         }}
         onAdminSuccess={(adminDenuncias) => {
           setDenuncias(adminDenuncias);
+          setSelectedUserCode(null);
           enterAdmin();
           setNotification({
             type: "success",
@@ -198,13 +339,23 @@ const AcompanharPage = memo(function AcompanharPage() {
       {notification && <Notification notification={notification} />}
       <main className="flex-1 bg-white text-black px-4 py-6">
         <div className="max-w-6xl mx-auto">
-          <h1 className="text-3xl font-bold mb-6">Acompanhar Denúncias</h1>
+          <h1 className="text-3xl font-bold mb-6 no-print">
+            Acompanhar Denúncias
+          </h1>
           {!mounted ? (
             <div className="space-y-4">
               <p>Carregando...</p>
             </div>
           ) : isAdmin ? (
             <>
+              {selectedUserCode && (
+                <div className="mb-4">
+                  <p className="text-sm text-gray-600">
+                    Mostrando denúncias do usuário:{" "}
+                    <strong>{selectedUserCode}</strong>
+                  </p>
+                </div>
+              )}
               {loading ? (
                 <p>Carregando...</p>
               ) : denuncias.length > 0 ? (
@@ -214,14 +365,23 @@ const AcompanharPage = memo(function AcompanharPage() {
                       <TableHead>Usuário</TableHead>
                       <TableHead>Categoria</TableHead>
                       <TableHead>Data</TableHead>
-                      <TableHead>Cidade e Estado</TableHead>
+                      <TableHead
+                        dangerouslySetInnerHTML={{
+                          __html: "Cidade<br/>Estado",
+                        }}
+                      ></TableHead>
                       <TableHead>Endereço</TableHead>
                       <TableHead>Descrição</TableHead>
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {denuncias
+                    {(selectedUserCode
+                      ? denuncias.filter(
+                          (d) => d.usuario_codigo === selectedUserCode,
+                        )
+                      : denuncias
+                    )
                       .sort((a, b) =>
                         (a.usuario_codigo || "").localeCompare(
                           b.usuario_codigo || "",
@@ -229,7 +389,16 @@ const AcompanharPage = memo(function AcompanharPage() {
                       )
                       .map((d) => (
                         <TableRow key={d.id}>
-                          <TableCell className="font-mono text-sm">
+                          <TableCell
+                            className="font-mono text-sm hover:bg-gray-100 cursor-pointer"
+                            onClick={() =>
+                              setSelectedUserCode(
+                                selectedUserCode === d.usuario_codigo
+                                  ? null
+                                  : d.usuario_codigo || null,
+                              )
+                            }
+                          >
                             {d.usuario_codigo}
                           </TableCell>
                           <TableCell>{formatarTexto(d.categoria)}</TableCell>
@@ -268,7 +437,11 @@ const AcompanharPage = memo(function AcompanharPage() {
                     <TableRow>
                       <TableHead>Categoria</TableHead>
                       <TableHead>Data</TableHead>
-                      <TableHead>Cidade e Estado</TableHead>
+                      <TableHead
+                        dangerouslySetInnerHTML={{
+                          __html: "Cidade<br/>Estado",
+                        }}
+                      ></TableHead>
                       <TableHead>Endereço</TableHead>
                       <TableHead>Descrição</TableHead>
                       <TableHead>Status</TableHead>
@@ -308,13 +481,18 @@ const AcompanharPage = memo(function AcompanharPage() {
                 denúncias:
               </p>
               <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="ABC12345"
-                  value={inputCode}
-                  onChange={(e) => setInputCode(e.target.value.toUpperCase())}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
-                />
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    placeholder="ABC12345"
+                    value={inputCode}
+                    onChange={(e) => setInputCode(e.target.value.toUpperCase())}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  />
+                  <span className="absolute bottom-2 right-3 text-xs text-gray-500">
+                    {inputCode.length}
+                  </span>
+                </div>
                 <button
                   onClick={() => handleCodeSubmit()}
                   className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 cursor-pointer"
@@ -326,7 +504,9 @@ const AcompanharPage = memo(function AcompanharPage() {
           )}
         </div>
       </main>
-      <Footer />
+      <div className="no-print">
+        <Footer />
+      </div>
     </div>
   );
 });

@@ -18,7 +18,7 @@ const Notification = memo(function Notification({
   if (!notification) return null;
 
   return (
-    <div className="fixed top-4 right-4 z-50 w-96 animate-alert-anim pointer-events-none">
+    <div className="fixed top-4 right-4 z-50 w-96 animate-alert-anim pointer-events-none no-print">
       <Alert
         variant={notification.type === "success" ? "default" : "destructive"}
         className={

@@ -80,6 +80,8 @@ export default memo(function DenunciaPage() {
       );
       router.push("/");
     }
+    // Definir título da página
+    document.title = "Fazer Denúncias";
   }, [isAdmin, router]);
 
   const handleCategoriaChange = useCallback((value: string | null) => {
