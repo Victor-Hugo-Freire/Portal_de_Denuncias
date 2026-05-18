@@ -218,6 +218,9 @@ const AcompanharPage = memo(function AcompanharPage() {
           }
           body {
             font-size: 12px;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
           }
           table {
             width: 100%;
@@ -256,6 +259,7 @@ const AcompanharPage = memo(function AcompanharPage() {
             width: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
+            height: auto !important;
           }
           main {
             padding: 0 !important;
@@ -295,6 +299,10 @@ const AcompanharPage = memo(function AcompanharPage() {
           td:nth-child(7) {
             width: 12%;
           } /* Status */
+          @page {
+            margin: 0;
+            size: A4;
+          }
         }
       `}</style>
       <div className="no-print">
