@@ -4,16 +4,10 @@ import Header from "../../components/header";
 import Footer from "../../components/footer";
 import Notification from "../../components/notification";
 import AdminPanel from "./admin-panel";
+import AdminFilters, { FilterState } from "./admin-filters";
+import ResponsiveTable from "../../components/responsive-table";
 import { useState, useEffect, useCallback, memo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../../components/ui/table";
 import { useAuth } from "../../context/auth-context";
 
 function formatarData(dataISO: string): string {
@@ -58,6 +52,12 @@ const AcompanharPage = memo(function AcompanharPage() {
   const [inputCode, setInputCode] = useState("");
   const [selectedUserCode, setSelectedUserCode] = useState<string | null>(null);
   const [ignoreQueryCode, setIgnoreQueryCode] = useState(false);
+  const [filters, setFilters] = useState<FilterState>({
+    dataInicio: "",
+    dataFim: "",
+    status: "",
+    categorias: [],
+  });
   const searchParams = useSearchParams();
   const router = useRouter();
   const rawCodeFromQuery = searchParams.get("code") || "";
@@ -141,6 +141,38 @@ const AcompanharPage = memo(function AcompanharPage() {
       setLoading(false);
     }
   }, [userCode]);
+
+  const getFilteredDenuncias = useCallback(
+    (denunciasToFilter: Denuncia[]) => {
+      return denunciasToFilter.filter((d) => {
+        if (filters.dataInicio) {
+          const denunciaDate = new Date(d.data_ocorrencia);
+          const filterDate = new Date(filters.dataInicio);
+          if (denunciaDate < filterDate) return false;
+        }
+
+        if (filters.dataFim) {
+          const denunciaDate = new Date(d.data_ocorrencia);
+          const filterDate = new Date(filters.dataFim);
+          if (denunciaDate > filterDate) return false;
+        }
+
+        if (filters.status && d.status !== filters.status) {
+          return false;
+        }
+
+        if (
+          filters.categorias.length > 0 &&
+          !filters.categorias.includes(d.categoria)
+        ) {
+          return false;
+        }
+
+        return true;
+      });
+    },
+    [filters],
+  );
 
   useEffect(() => {
     if (isAdmin) {
@@ -356,6 +388,7 @@ const AcompanharPage = memo(function AcompanharPage() {
             </div>
           ) : isAdmin ? (
             <>
+              <AdminFilters onFilterChange={setFilters} />
               {selectedUserCode && (
                 <div className="mb-4">
                   <p className="text-sm text-gray-600">
@@ -367,70 +400,74 @@ const AcompanharPage = memo(function AcompanharPage() {
               {loading ? (
                 <p>Carregando...</p>
               ) : denuncias.length > 0 ? (
-                <Table className="table-fixed w-full">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Usuário</TableHead>
-                      <TableHead>Categoria</TableHead>
-                      <TableHead>Data</TableHead>
-                      <TableHead
-                        dangerouslySetInnerHTML={{
-                          __html: "Cidade<br/>Estado",
-                        }}
-                      ></TableHead>
-                      <TableHead>Endereço</TableHead>
-                      <TableHead>Descrição</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {(selectedUserCode
-                      ? denuncias.filter(
-                          (d) => d.usuario_codigo === selectedUserCode,
-                        )
-                      : denuncias
-                    )
-                      .sort((a, b) =>
-                        (a.usuario_codigo || "").localeCompare(
-                          b.usuario_codigo || "",
-                        ),
+                <>
+                  <ResponsiveTable
+                    denuncias={getFilteredDenuncias(
+                      selectedUserCode
+                        ? denuncias.filter(
+                            (d) => d.usuario_codigo === selectedUserCode,
+                          )
+                        : denuncias,
+                    ).sort((a, b) =>
+                      (a.usuario_codigo || "").localeCompare(
+                        b.usuario_codigo || "",
+                      ),
+                    )}
+                    isAdmin={true}
+                    onUserClick={(code) =>
+                      setSelectedUserCode(
+                        selectedUserCode === code ? null : code,
                       )
-                      .map((d) => (
-                        <TableRow key={d.id}>
-                          <TableCell
-                            className="font-mono text-sm hover:bg-gray-100 cursor-pointer"
-                            onClick={() =>
-                              setSelectedUserCode(
-                                selectedUserCode === d.usuario_codigo
-                                  ? null
-                                  : d.usuario_codigo || null,
-                              )
-                            }
-                          >
-                            {d.usuario_codigo}
-                          </TableCell>
-                          <TableCell>{formatarTexto(d.categoria)}</TableCell>
-                          <TableCell>
-                            {formatarData(d.data_ocorrencia)}
-                          </TableCell>
-                          <TableCell className="wrap-break-word whitespace-normal">
-                            {d.cidade}, {d.estado}
-                          </TableCell>
-                          <TableCell className="max-w-xs wrap-break-word whitespace-normal">
-                            {d.endereco.length > 50
-                              ? d.endereco.slice(0, 50) + "..."
-                              : d.endereco}
-                          </TableCell>
-                          <TableCell className="max-w-md wrap-break-word whitespace-normal min-w-80">
-                            {d.descricao}
-                          </TableCell>
-                          <TableCell>
-                            {formatarTexto(d.status || "Em análise")}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                  </TableBody>
-                </Table>
+                    }
+                    selectedUserCode={selectedUserCode}
+                    formatarData={formatarData}
+                    formatarTexto={formatarTexto}
+                  />
+                  {(filters.dataInicio ||
+                    filters.dataFim ||
+                    filters.status ||
+                    filters.categorias.length > 0) && (
+                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-gray-700 no-print">
+                      <strong>Filtros aplicados:</strong>{" "}
+                      {filters.dataInicio && (
+                        <span>
+                          Data inicial:{" "}
+                          {new Date(filters.dataInicio).toLocaleDateString(
+                            "pt-BR",
+                          )}
+                          {" | "}
+                        </span>
+                      )}
+                      {filters.dataFim && (
+                        <span>
+                          Data final:{" "}
+                          {new Date(filters.dataFim).toLocaleDateString(
+                            "pt-BR",
+                          )}
+                          {" | "}
+                        </span>
+                      )}
+                      {filters.status && (
+                        <span>
+                          Status: {formatarTexto(filters.status)}
+                          {" | "}
+                        </span>
+                      )}
+                      {filters.categorias.length > 0 && (
+                        <span>
+                          Categorias:{" "}
+                          {filters.categorias
+                            .map((c) => formatarTexto(c))
+                            .join(", ")}
+                          {" | "}
+                        </span>
+                      )}
+                      {selectedUserCode && (
+                        <span>Usuário: {selectedUserCode}</span>
+                      )}
+                    </div>
+                  )}
+                </>
               ) : (
                 <p>Nenhuma denúncia encontrada.</p>
               )}
@@ -440,44 +477,12 @@ const AcompanharPage = memo(function AcompanharPage() {
               {loading ? (
                 <p>Carregando...</p>
               ) : denuncias.length > 0 ? (
-                <Table className="table-fixed w-full">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Categoria</TableHead>
-                      <TableHead>Data</TableHead>
-                      <TableHead
-                        dangerouslySetInnerHTML={{
-                          __html: "Cidade<br/>Estado",
-                        }}
-                      ></TableHead>
-                      <TableHead>Endereço</TableHead>
-                      <TableHead>Descrição</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {denuncias.map((d) => (
-                      <TableRow key={d.id}>
-                        <TableCell>{formatarTexto(d.categoria)}</TableCell>
-                        <TableCell>{formatarData(d.data_ocorrencia)}</TableCell>
-                        <TableCell className="wrap-break-word whitespace-normal">
-                          {d.cidade}, {d.estado}
-                        </TableCell>
-                        <TableCell className="max-w-xs wrap-break-word whitespace-normal">
-                          {d.endereco.length > 50
-                            ? d.endereco.slice(0, 50) + "..."
-                            : d.endereco}
-                        </TableCell>
-                        <TableCell className="max-w-md wrap-break-word whitespace-normal min-w-80">
-                          {d.descricao}
-                        </TableCell>
-                        <TableCell>
-                          {formatarTexto(d.status || "Em análise")}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <ResponsiveTable
+                  denuncias={denuncias}
+                  isAdmin={false}
+                  formatarData={formatarData}
+                  formatarTexto={formatarTexto}
+                />
               ) : (
                 <p>Você ainda não fez nenhuma denúncia.</p>
               )}
