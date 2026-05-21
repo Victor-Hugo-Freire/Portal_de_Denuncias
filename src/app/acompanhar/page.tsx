@@ -5,7 +5,7 @@ import Footer from "../../components/footer";
 import Notification from "../../components/notification";
 import AdminPanel from "./admin-panel";
 import AdminFilters, { FilterState } from "./admin-filters";
-import ResponsiveTable from "../../components/responsive-table";
+import ResponsiveDenunciasTable from "../../components/responsive-table";
 import { useState, useEffect, useCallback, memo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "../../context/auth-context";
@@ -172,6 +172,49 @@ const AcompanharPage = memo(function AcompanharPage() {
       });
     },
     [filters],
+  );
+
+  const handleStatusChange = useCallback(
+    async (id: number, newStatus: string) => {
+      try {
+        const res = await fetch("/api/denuncia/status", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, status: newStatus }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setDenuncias((prevDenuncias) =>
+            prevDenuncias.map((d) =>
+              d.id === id ? { ...d, status: newStatus } : d,
+            ),
+          );
+          setNotification({
+            type: "success",
+            title: "Status atualizado",
+            message: "Status da denúncia atualizado com sucesso.",
+          });
+          setTimeout(() => setNotification(null), 5000);
+        } else {
+          setNotification({
+            type: "error",
+            title: "Erro",
+            message: "Erro ao atualizar status.",
+          });
+          setTimeout(() => setNotification(null), 5000);
+        }
+      } catch (error) {
+        console.error("Erro ao atualizar status:", error);
+        setNotification({
+          type: "error",
+          title: "Erro",
+          message: "Erro ao atualizar status.",
+        });
+        setTimeout(() => setNotification(null), 5000);
+      }
+    },
+    [],
   );
 
   useEffect(() => {
@@ -401,7 +444,47 @@ const AcompanharPage = memo(function AcompanharPage() {
                 <p>Carregando...</p>
               ) : denuncias.length > 0 ? (
                 <>
-                  <ResponsiveTable
+                  {(filters.dataInicio ||
+                    filters.dataFim ||
+                    filters.status ||
+                    filters.categorias.length > 0) && (
+                    <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded text-sm text-gray-700 print:bg-white print:border-gray-300">
+                      <strong>Filtros aplicados neste relatório:</strong>
+                      <ul className="mt-2 list-disc list-inside space-y-1">
+                        {filters.dataInicio && (
+                          <li>
+                            Data inicial:{" "}
+                            {new Date(filters.dataInicio).toLocaleDateString(
+                              "pt-BR",
+                            )}
+                          </li>
+                        )}
+                        {filters.dataFim && (
+                          <li>
+                            Data final:{" "}
+                            {new Date(filters.dataFim).toLocaleDateString(
+                              "pt-BR",
+                            )}
+                          </li>
+                        )}
+                        {filters.status && (
+                          <li>Status: {formatarTexto(filters.status)}</li>
+                        )}
+                        {filters.categorias.length > 0 && (
+                          <li>
+                            Categorias:{" "}
+                            {filters.categorias
+                              .map((c) => formatarTexto(c))
+                              .join(", ")}
+                          </li>
+                        )}
+                        {selectedUserCode && (
+                          <li>Usuário: {selectedUserCode}</li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
+                  <ResponsiveDenunciasTable
                     denuncias={getFilteredDenuncias(
                       selectedUserCode
                         ? denuncias.filter(
@@ -419,54 +502,11 @@ const AcompanharPage = memo(function AcompanharPage() {
                         selectedUserCode === code ? null : code,
                       )
                     }
+                    onStatusChange={handleStatusChange}
                     selectedUserCode={selectedUserCode}
                     formatarData={formatarData}
                     formatarTexto={formatarTexto}
                   />
-                  {(filters.dataInicio ||
-                    filters.dataFim ||
-                    filters.status ||
-                    filters.categorias.length > 0) && (
-                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-gray-700 no-print">
-                      <strong>Filtros aplicados:</strong>{" "}
-                      {filters.dataInicio && (
-                        <span>
-                          Data inicial:{" "}
-                          {new Date(filters.dataInicio).toLocaleDateString(
-                            "pt-BR",
-                          )}
-                          {" | "}
-                        </span>
-                      )}
-                      {filters.dataFim && (
-                        <span>
-                          Data final:{" "}
-                          {new Date(filters.dataFim).toLocaleDateString(
-                            "pt-BR",
-                          )}
-                          {" | "}
-                        </span>
-                      )}
-                      {filters.status && (
-                        <span>
-                          Status: {formatarTexto(filters.status)}
-                          {" | "}
-                        </span>
-                      )}
-                      {filters.categorias.length > 0 && (
-                        <span>
-                          Categorias:{" "}
-                          {filters.categorias
-                            .map((c) => formatarTexto(c))
-                            .join(", ")}
-                          {" | "}
-                        </span>
-                      )}
-                      {selectedUserCode && (
-                        <span>Usuário: {selectedUserCode}</span>
-                      )}
-                    </div>
-                  )}
                 </>
               ) : (
                 <p>Nenhuma denúncia encontrada.</p>
@@ -477,7 +517,7 @@ const AcompanharPage = memo(function AcompanharPage() {
               {loading ? (
                 <p>Carregando...</p>
               ) : denuncias.length > 0 ? (
-                <ResponsiveTable
+                <ResponsiveDenunciasTable
                   denuncias={denuncias}
                   isAdmin={false}
                   formatarData={formatarData}

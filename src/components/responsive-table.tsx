@@ -1,6 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import DenunciaDescription from "./denuncia-description";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -26,6 +36,7 @@ interface TableProps {
   denuncias: Denuncia[];
   isAdmin?: boolean;
   onUserClick?: (code: string) => void;
+  onStatusChange?: (id: number, status: string) => Promise<void>;
   selectedUserCode?: string | null;
   formatarData: (data: string) => string;
   formatarTexto: (texto: string) => string;
@@ -35,11 +46,36 @@ export default function ResponsiveTable({
   denuncias,
   isAdmin = false,
   onUserClick,
+  onStatusChange,
   selectedUserCode,
   formatarData,
   formatarTexto,
 }: TableProps) {
-  const [expandedCard, setExpandedCard] = useState<number | null>(null);
+  const [selectedDenuncia, setSelectedDenuncia] = useState<Denuncia | null>(
+    null,
+  );
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    denunciaId: number;
+    currentStatus: string;
+    newStatus: string;
+  }>({
+    isOpen: false,
+    denunciaId: 0,
+    currentStatus: "",
+    newStatus: "",
+  });
+
+  const handleConfirmStatusChange = async () => {
+    if (!onStatusChange) return;
+    await onStatusChange(confirmDialog.denunciaId, confirmDialog.newStatus);
+    setSelectedDenuncia((prev) =>
+      prev && prev.id === confirmDialog.denunciaId
+        ? { ...prev, status: confirmDialog.newStatus }
+        : prev,
+    );
+    setConfirmDialog({ ...confirmDialog, isOpen: false });
+  };
 
   if (denuncias.length === 0) {
     return (
@@ -70,16 +106,20 @@ export default function ResponsiveTable({
             {denuncias.map((d) => (
               <TableRow
                 key={d.id}
-                className={
+                className={`cursor-pointer hover:bg-blue-100 transition ${
                   isAdmin && selectedUserCode === d.usuario_codigo
                     ? "bg-blue-50"
                     : ""
-                }
+                }`}
+                onClick={() => setSelectedDenuncia(d)}
               >
                 {isAdmin && (
                   <TableCell
                     className="font-mono text-sm hover:bg-gray-100 cursor-pointer font-medium"
-                    onClick={() => onUserClick?.(d.usuario_codigo || "")}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onUserClick?.(d.usuario_codigo || "");
+                    }}
                   >
                     {d.usuario_codigo}
                   </TableCell>
@@ -169,26 +209,68 @@ export default function ResponsiveTable({
                 Descrição:
               </span>
               <p
-                className={`text-gray-700 text-sm mt-1 ${
-                  expandedCard === d.id ? "" : "line-clamp-2"
-                }`}
+                onClick={() => setSelectedDenuncia(d)}
+                className="text-gray-700 text-sm mt-1 line-clamp-2 cursor-pointer hover:text-blue-600 transition"
               >
                 {d.descricao}
               </p>
-              {d.descricao.length > 100 && (
-                <button
-                  onClick={() =>
-                    setExpandedCard(expandedCard === d.id ? null : d.id)
-                  }
-                  className="text-blue-500 text-xs font-medium mt-2 hover:text-blue-700"
-                >
-                  {expandedCard === d.id ? "Mostrar menos" : "Mostrar mais"}
-                </button>
-              )}
+              <button
+                onClick={() => setSelectedDenuncia(d)}
+                className="text-blue-500 text-xs font-medium mt-2 hover:text-blue-700"
+              >
+                Ver todos os detalhes
+              </button>
             </div>
           </div>
         ))}
       </div>
+
+      <DenunciaDescription
+        denuncia={selectedDenuncia}
+        onClose={() => setSelectedDenuncia(null)}
+        isAdmin={isAdmin}
+        onStatusChange={onStatusChange}
+        onOpenConfirmDialog={(currentStatus, newStatus) => {
+          setConfirmDialog({
+            isOpen: true,
+            denunciaId: selectedDenuncia?.id || 0,
+            currentStatus,
+            newStatus,
+          });
+        }}
+        confirmDialog={confirmDialog}
+        onConfirmStatusChange={handleConfirmStatusChange}
+        onCancelConfirm={() =>
+          setConfirmDialog({ ...confirmDialog, isOpen: false })
+        }
+        formatarData={formatarData}
+        formatarTexto={formatarTexto}
+      />
+
+      <Dialog open={confirmDialog.isOpen} onOpenChange={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar mudança de status</DialogTitle>
+          </DialogHeader>
+          <DialogDescription>
+            Deseja mudar o status de{" "}
+            <span className="font-semibold">{formatarTexto(confirmDialog.currentStatus)}</span>{" "}
+            para{" "}
+            <span className="font-semibold">{formatarTexto(confirmDialog.newStatus)}</span>?
+          </DialogDescription>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmStatusChange}>
+              Confirmar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
