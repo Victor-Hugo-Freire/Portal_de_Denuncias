@@ -17,12 +17,14 @@ interface HeaderProps {
   showMakeComplaintButton?: boolean;
   showCodeButton?: boolean;
   showTrackingButton?: boolean;
+  onExportReport?: () => void;
 }
 
 export default function Header({
   showMakeComplaintButton = true,
   showCodeButton = true,
   showTrackingButton = true,
+  onExportReport,
 }: HeaderProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -108,14 +110,8 @@ export default function Header({
         )}
         {isAdmin && pathname === "/acompanhar" && (
           <button
-            onClick={() => {
-              document.title = "relatorio_denuncias";
-              window.print();
-              setTimeout(() => {
-                document.title = "Acompanhar Denúncias";
-              }, 100);
-            }}
-            className="px-2 py-1 bg-blue-500 text-white rounded-md border border-blue-600 hover:bg-blue-600 transition cursor-pointer text-sm"
+            onClick={onExportReport}
+            className="px-2 py-1 bg-green-600 text-white rounded-md border border-green-700 hover:bg-green-700 transition cursor-pointer text-sm"
           >
             Gerar Relatório
           </button>

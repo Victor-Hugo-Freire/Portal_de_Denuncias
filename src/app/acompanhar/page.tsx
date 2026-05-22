@@ -31,6 +31,78 @@ function formatarTexto(texto: string): string {
     .join(" ");
 }
 
+function gerarRelatorioCSV(
+  denuncias: Denuncia[],
+  filtros: FilterState,
+  selectedUserCode: string | null,
+  formatarData: (data: string) => string,
+  formatarTexto: (texto: string) => string,
+): string {
+  const linhas: string[] = [];
+
+  // Cabeçalho com informações do relatório
+  linhas.push("RELATÓRIO DE DENÚNCIAS");
+  const dataAgora = new Date();
+  const dataFormatada = `${String(dataAgora.getDate()).padStart(2, "0")}/${String(dataAgora.getMonth() + 1).padStart(2, "0")}/${dataAgora.getFullYear()}`;
+  linhas.push(`Data do relatório: ${dataFormatada}`);
+  linhas.push("");
+
+  // Seção de filtros aplicados
+  linhas.push("FILTROS APLICADOS:");
+  if (filtros.dataInicio) {
+    linhas.push(`Data Inicial: ${formatarData(filtros.dataInicio)}`);
+  }
+  if (filtros.dataFim) {
+    linhas.push(`Data Final: ${formatarData(filtros.dataFim)}`);
+  }
+  if (filtros.status) {
+    linhas.push(`Status: ${formatarTexto(filtros.status)}`);
+  }
+  if (filtros.categorias.length > 0) {
+    linhas.push(
+      `Categorias: ${filtros.categorias.map((c) => formatarTexto(c)).join(", ")}`,
+    );
+  }
+  if (selectedUserCode) {
+    linhas.push(`Usuário: ${selectedUserCode}`);
+  }
+  if (
+    !filtros.dataInicio &&
+    !filtros.dataFim &&
+    !filtros.status &&
+    filtros.categorias.length === 0 &&
+    !selectedUserCode
+  ) {
+    linhas.push("Nenhum filtro aplicado - exibindo todas as denúncias");
+  }
+
+  linhas.push("");
+  linhas.push(`Total de denúncias: ${denuncias.length}`);
+  linhas.push("");
+
+  // Cabeçalho da tabela
+  linhas.push(
+    "Usuário,Categoria,Data da Ocorrência,Cidade,Estado,Endereço,Status,Descrição",
+  );
+
+  // Dados das denúncias
+  denuncias.forEach((d) => {
+    const linha = [
+      d.usuario_codigo || "",
+      d.categoria,
+      formatarData(d.data_ocorrencia),
+      d.cidade,
+      d.estado,
+      `"${d.endereco.replace(/"/g, '""')}"`,
+      d.status || "Em análise",
+      `"${d.descricao.replace(/"/g, '""')}"`,
+    ].join(",");
+    linhas.push(linha);
+  });
+
+  return linhas.join("\n");
+}
+
 type Denuncia = {
   id: number;
   categoria: string;
@@ -217,6 +289,42 @@ const AcompanharPage = memo(function AcompanharPage() {
     [],
   );
 
+  const handleExportarRelatorio = useCallback(() => {
+    const filteredDenuncias = getFilteredDenuncias(
+      selectedUserCode
+        ? denuncias.filter((d) => d.usuario_codigo === selectedUserCode)
+        : denuncias,
+    );
+
+    const csv = gerarRelatorioCSV(
+      filteredDenuncias,
+      filters,
+      selectedUserCode,
+      formatarData,
+      formatarTexto,
+    );
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+
+    const agora = new Date();
+    const dia = String(agora.getDate()).padStart(2, "0");
+    const mes = String(agora.getMonth() + 1).padStart(2, "0");
+    const ano = agora.getFullYear();
+
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `relatorio_denuncias_${dia}-${mes}-${ano}.csv`,
+    );
+    link.style.visibility = "hidden";
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, [denuncias, filters, selectedUserCode, getFilteredDenuncias]);
+
   useEffect(() => {
     if (isAdmin) {
       return;
@@ -385,6 +493,7 @@ const AcompanharPage = memo(function AcompanharPage() {
           showMakeComplaintButton={!isAdmin}
           showCodeButton={true}
           showTrackingButton={false}
+          onExportReport={isAdmin ? handleExportarRelatorio : undefined}
         />
       </div>
       <AdminPanel

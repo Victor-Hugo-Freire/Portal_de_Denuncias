@@ -201,7 +201,7 @@ export default function AdminFilters({ onFilterChange }: AdminFiltersProps) {
             onClick={clearFilters}
             className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md font-medium transition text-sm"
           >
-            ✕ Limpar todos os filtros
+            Limpar todos os filtros
           </button>
         )}
       </div>
