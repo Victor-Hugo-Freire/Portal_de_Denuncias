@@ -130,6 +130,14 @@ const AcompanharPage = memo(function AcompanharPage() {
     status: "",
     categorias: [],
   });
+  const [searchUserCode, setSearchUserCode] = useState("");
+
+  // Limpar input de busca quando um código é clicado
+  useEffect(() => {
+    if (selectedUserCode) {
+      setSearchUserCode("");
+    }
+  }, [selectedUserCode]);
   const searchParams = useSearchParams();
   const router = useRouter();
   const rawCodeFromQuery = searchParams.get("code") || "";
@@ -367,6 +375,7 @@ const AcompanharPage = memo(function AcompanharPage() {
       setSelectedUserCode(null);
       setDenuncias([]);
       setInputCode("");
+      setSearchUserCode("");
     }
   }, [isLogged, isAdmin]);
 
@@ -375,6 +384,7 @@ const AcompanharPage = memo(function AcompanharPage() {
       setSelectedUserCode(null);
       setDenuncias([]);
       setInputCode("");
+      setSearchUserCode("");
       setIgnoreQueryCode(true);
       router.replace("/acompanhar");
       window.history.replaceState(null, "", "/acompanhar");
@@ -541,6 +551,30 @@ const AcompanharPage = memo(function AcompanharPage() {
           ) : isAdmin ? (
             <>
               <AdminFilters onFilterChange={setFilters} />
+
+              <div className="mb-6 flex justify-center">
+                <div className="w-full max-w-md">
+                  <input
+                    type="text"
+                    placeholder="Buscar código de usuário (8 caracteres)"
+                    value={searchUserCode}
+                    onChange={(e) => setSearchUserCode(e.target.value.toUpperCase())}
+                    maxLength={8}
+                    disabled={!!selectedUserCode}
+                    className={`w-full px-4 py-2 border rounded-md focus:outline-none ${
+                      selectedUserCode
+                        ? "border-gray-300 bg-gray-200 text-gray-500 cursor-not-allowed"
+                        : "border-gray-300 focus:ring-2 focus:ring-blue-500"
+                    }`}
+                  />
+                  <p className="text-xs text-gray-500 text-center mt-1">
+                    {selectedUserCode
+                      ? "Desmarque o usuário clicado para buscar outro"
+                      : `${searchUserCode.length}/8`}
+                  </p>
+                </div>
+              </div>
+
               {selectedUserCode && (
                 <div className="mb-4">
                   <p className="text-sm text-gray-600">
@@ -595,15 +629,17 @@ const AcompanharPage = memo(function AcompanharPage() {
                   )}
                   <ResponsiveDenunciasTable
                     denuncias={getFilteredDenuncias(
-                      selectedUserCode
-                        ? denuncias.filter(
-                            (d) => d.usuario_codigo === selectedUserCode,
+                      searchUserCode
+                        ? denuncias.filter((d) =>
+                            d.usuario_codigo
+                              ?.toUpperCase()
+                              .includes(searchUserCode.toUpperCase()),
                           )
-                        : denuncias,
-                    ).sort((a, b) =>
-                      (a.usuario_codigo || "").localeCompare(
-                        b.usuario_codigo || "",
-                      ),
+                        : selectedUserCode
+                          ? denuncias.filter(
+                              (d) => d.usuario_codigo === selectedUserCode,
+                            )
+                          : denuncias,
                     )}
                     isAdmin={true}
                     onUserClick={(code) =>

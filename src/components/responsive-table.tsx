@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DenunciaDescription from "./denuncia-description";
 import {
   Dialog,
@@ -70,6 +70,11 @@ export default function ResponsiveTable({
     currentStatus: "",
     newStatus: "",
   });
+
+  // Resetar para página 1 quando selectedUserCode muda ou denúncias mudam
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedUserCode, denuncias.length]);
 
   const handleConfirmStatusChange = async () => {
     if (!onStatusChange) return;
