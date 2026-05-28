@@ -52,6 +52,8 @@ export default memo(function DenunciaPage() {
     endereco: "",
     descricao: "",
   });
+  const [categoriaMesma, setCategoriaMesma] = useState("");
+  const [mostrarInputCustomizado, setMostrarInputCustomizado] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [notification, setNotification] = useState<{
     type: "success" | "error";
@@ -63,8 +65,9 @@ export default memo(function DenunciaPage() {
   const [loadingCidades, setLoadingCidades] = useState(false);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loadingCategorias, setLoadingCategorias] = useState(true);
-  const categoriaSelecionadaLabel =
-    categorias.find((cat) => cat.value === form.categoria)?.label || "";
+  const categoriaSelecionadaLabel = mostrarInputCustomizado
+    ? "Outro (especificar)"
+    : categorias.find((cat) => cat.value === form.categoria)?.label || "";
   const router = useRouter();
 
   useEffect(() => {
@@ -85,7 +88,14 @@ export default memo(function DenunciaPage() {
   }, [isAdmin, router]);
 
   const handleCategoriaChange = useCallback((value: string | null) => {
-    setForm((prev) => ({ ...prev, categoria: value ?? "" }));
+    if (value === "outro") {
+      setMostrarInputCustomizado(true);
+      setForm((prev) => ({ ...prev, categoria: "" }));
+    } else {
+      setMostrarInputCustomizado(false);
+      setCategoriaMesma("");
+      setForm((prev) => ({ ...prev, categoria: value ?? "" }));
+    }
   }, []);
 
   const handleDataChange = useCallback(
@@ -213,7 +223,18 @@ export default memo(function DenunciaPage() {
   const validar = useCallback(() => {
     const newErrors: Record<string, string> = {};
 
-    if (!form.categoria) newErrors.categoria = "Selecione o tipo do crime";
+    if (mostrarInputCustomizado) {
+      if (!categoriaMesma) {
+        newErrors.categoria = "Digite a categoria";
+      } else if (categoriaMesma.length < 6) {
+        newErrors.categoria = "A categoria deve ter no mínimo 6 caracteres";
+      } else if (categoriaMesma.length > 30) {
+        newErrors.categoria = "A categoria deve ter no máximo 30 caracteres";
+      }
+    } else if (!form.categoria) {
+      newErrors.categoria = "Selecione o tipo do crime";
+    }
+
     if (!form.data) {
       newErrors.data = "Informe a data do ocorrido";
     } else {
@@ -243,7 +264,7 @@ export default memo(function DenunciaPage() {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [form]);
+  }, [form, mostrarInputCustomizado, categoriaMesma]);
 
   const wordCount = useMemo(() => {
     return form.descricao.trim().split(/\s+/).filter(Boolean).length;
@@ -280,13 +301,18 @@ export default memo(function DenunciaPage() {
         body: JSON.stringify({ code: codeToUse }),
       });
 
+      // Usar categoria customizada se for "outro"
+      const categoriaParaSalvar = mostrarInputCustomizado
+        ? categoriaMesma
+        : form.categoria;
+
       // Submeter denúncia
       const response = await fetch("/api/denuncia", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           usuario_codigo: codeToUse,
-          categoria: form.categoria,
+          categoria: categoriaParaSalvar,
           data_ocorrencia: form.data,
           estado: form.estado,
           cidade: form.cidade,
@@ -318,6 +344,8 @@ export default memo(function DenunciaPage() {
         endereco: "",
         descricao: "",
       });
+      setCategoriaMesma("");
+      setMostrarInputCustomizado(false);
       setErrors({});
     } catch (error) {
       console.error(error);
@@ -353,11 +381,13 @@ export default memo(function DenunciaPage() {
                   className={`${errors.categoria ? "border-red-500" : "border-gray-400"} border-2 focus:border-black focus:ring-2 focus:ring-black/10 cursor-pointer w-full`}
                 >
                   <SelectValue>
-                    {form.categoria
-                      ? categoriaSelecionadaLabel
-                      : loadingCategorias
-                        ? "Carregando..."
-                        : "Selecione uma categoria"}
+                    {mostrarInputCustomizado
+                      ? `Outro: ${categoriaMesma || ""}`
+                      : form.categoria
+                        ? categoriaSelecionadaLabel
+                        : loadingCategorias
+                          ? "Carregando..."
+                          : "Selecione uma categoria"}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -366,8 +396,52 @@ export default memo(function DenunciaPage() {
                       {cat.label}
                     </SelectItem>
                   ))}
+                  <div
+                    className="flex items-center justify-between gap-2 px-2 py-1.5 hover:bg-accent cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMostrarInputCustomizado(true);
+                    }}
+                  >
+                    <span className="text-sm">Outro</span>
+                    <div className="flex items-center gap-2 flex-1">
+                      <input
+                        type="text"
+                        maxLength={30}
+                        value={categoriaMesma}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          setCategoriaMesma(e.target.value.slice(0, 30));
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        placeholder="Digite"
+                        className="flex-1 px-0 py-0 text-sm border-0 border-b border-gray-400 focus:outline-none focus:ring-0 focus:border-blue-500 bg-transparent"
+                        style={{
+                          display: mostrarInputCustomizado ? "block" : "none",
+                        }}
+                      />
+                      <span
+                        className="text-xs text-gray-500 whitespace-nowrap"
+                        style={{
+                          display: mostrarInputCustomizado ? "block" : "none",
+                        }}
+                      >
+                        {categoriaMesma.length}/30
+                      </span>
+                    </div>
+                  </div>
                 </SelectContent>
               </Select>
+              {mostrarInputCustomizado && (
+                <p className="text-gray-500 text-xs">
+                  {categoriaMesma.length < 6 && categoriaMesma.length > 0 && (
+                    <span className="text-red-500">
+                      Mínimo 6 caracteres
+                    </span>
+                  )}
+                </p>
+              )}
               {errors.categoria && (
                 <p className="text-red-600 text-sm">{errors.categoria}</p>
               )}

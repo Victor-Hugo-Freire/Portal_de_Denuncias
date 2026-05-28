@@ -66,8 +66,7 @@ INSERT INTO categorias (nome, descricao) VALUES
 ('suborno', 'Suborno'),
 ('falsificacao', 'Falsificação de documentos'),
 ('assedio', 'Assédio moral ou sexual'),
-('evasao_fiscal', 'Evasão fiscal'),
-('outro', 'Outro');
+('evasao_fiscal', 'Evasão fiscal');
 
 INSERT INTO denuncias (usuario_codigo, categoria_id, data_ocorrencia, estado, cidade, endereco, descricao, status)
 VALUES
@@ -106,7 +105,7 @@ VALUES
 ('ABC12345', 6, '2024-06-27', 'Santa Catarina', 'Blumenau', 'Rua XV de Novembro, 1000 - Centro - Blumenau - SC', 'Denúncia de violência em abordagem policial, com uso de armas de fogo contra cidadão desarmado.', 'em_andamento'),
 ('XYZ67890', 14, '2024-07-01', 'Rio Grande do Sul', 'Pelotas', 'Rua Félix da Cunha, 600 - Centro - Pelotas - RS', 'Relato de assédio sexual por supervisor em órgão público estadual, com vítima sendo coagida a rescindir contrato.', 'pendente'),
 ('LMN11223', 15, '2024-07-03', 'Espírito Santo', 'Cariacica', 'Avenida Centroamericana, 1000 - Centro - Cariacica - ES', 'Indícios de evasão fiscal em operações comerciais com a administração pública.', 'resolvido'),
-('QWE44556', 16, '2024-07-05', 'Mato Grosso', 'Cuiabá', 'Avenida Getúlio Vargas, 3000 - Centro - Cuiabá - MT', 'Denúncia de uso indevido de dados pessoais por servidor público para fins políticos.', 'em_andamento'),
+('QWE44556', 1, '2024-07-05', 'Mato Grosso', 'Cuiabá', 'Avenida Getúlio Vargas, 3000 - Centro - Cuiabá - MT', 'Denúncia de uso indevido de dados pessoais por servidor público para fins políticos.', 'em_andamento'),
 ('RTY77889', 1, '2024-07-08', 'Distrito Federal', 'Brasília', 'SCLS Quadra 107 Bloco C - Asa Sul - Brasília - DF', 'Relato de corrupção em concessão de alugueis públicos, com favorecimento de proprietários aliados.', 'pendente'),
 ('UIO99001', 7, '2024-07-10', 'Ceará', 'Caucaia', 'Rua Vicente Sousa, 900 - Centro - Caucaia - CE', 'Denúncia de peculato envolvendo gestor de fundo público que desviou recursos para conta pessoal.', 'em_andamento'),
 ('PAS22334', 2, '2024-07-12', 'Pernambuco', 'Jaboatão dos Guararapes', 'Avenida Getúlio Vargas, 2200 - Centro - Jaboatão dos Guararapes - PE', 'Relato de abuso de autoridade por juiz que teria condenado cidadão sem permitir direito de defesa adequado.', 'resolvido'),
@@ -116,7 +115,7 @@ VALUES
 ('MNO23456', 6, '2024-07-22', 'Alagoas', 'Rio Largo', 'Rua João Pessoa, 500 - Centro - Rio Largo - AL', 'Relato de abuso de autoridade policial durante fiscalização em estabelecimento comercial.', 'resolvido'),
 ('PQR67890', 14, '2024-07-25', 'Sergipe', 'Nossa Senhora do Socorro', 'Avenida Getúlio Vargas, 1500 - Centro - Nossa Senhora do Socorro - SE', 'Denúncia de assédio moral contra servidora pública por gerente direto.', 'em_andamento'),
 ('STU12345', 15, '2024-07-27', 'Tocantins', 'Araguaína', 'Avenida Getúlio Vargas, 3000 - Centro - Araguaína - TO', 'Indícios de fraude em licitação para fornecimento de materiais de saúde pública.', 'pendente'),
-('VWX89012', 16, '2024-08-01', 'Amazonas', 'Itacoatiara', 'Rua Getúlio Vargas, 700 - Centro - Itacoatiara - AM', 'Relato de violação de propriedade intelectual por órgão público.', 'resolvido'),
+('VWX89012', 1, '2024-08-01', 'Amazonas', 'Itacoatiara', 'Rua Getúlio Vargas, 700 - Centro - Itacoatiara - AM', 'Relato de violação de propriedade intelectual por órgão público.', 'resolvido'),
 ('YZA34567', 1, '2024-08-03', 'Rondônia', 'Ariquemes', 'Avenida Getúlio Vargas, 1200 - Centro - Ariquemes - RO', 'Denúncia de corrupção em distribuição de verbas municipais para escolas.', 'em_andamento'),
 ('BCD78901', 7, '2024-08-05', 'Acre', 'Cruzeiro do Sul', 'Rua Getúlio Vargas, 600 - Centro - Cruzeiro do Sul - AC', 'Relato de peculato em fundo de pensão de servidores públicos estaduais.', 'pendente'),
 ('EFG45678', 2, '2024-08-08', 'Amapá', 'Oiapoque', 'Avenida Getúlio Vargas, 400 - Centro - Oiapoque - AP', 'Denúncia de abuso de poder por prefeito que teria perseguido opositores políticos.', 'resolvido'),
