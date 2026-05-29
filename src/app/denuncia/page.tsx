@@ -54,6 +54,7 @@ export default memo(function DenunciaPage() {
   });
   const [categoriaMesma, setCategoriaMesma] = useState("");
   const [mostrarInputCustomizado, setMostrarInputCustomizado] = useState(false);
+  const [isSelectOpen, setIsSelectOpen] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [notification, setNotification] = useState<{
     type: "success" | "error";
@@ -90,13 +91,22 @@ export default memo(function DenunciaPage() {
   const handleCategoriaChange = useCallback((value: string | null) => {
     if (value === "outro") {
       setMostrarInputCustomizado(true);
-      setForm((prev) => ({ ...prev, categoria: "" }));
+      setForm((prev) => ({ ...prev, categoria: "outro" }));
     } else {
       setMostrarInputCustomizado(false);
       setCategoriaMesma("");
       setForm((prev) => ({ ...prev, categoria: value ?? "" }));
+      setIsSelectOpen(false);
     }
   }, []);
+
+  // Limpar input customizado quando categoria muda
+  useEffect(() => {
+    if (form.categoria !== "outro") {
+      setCategoriaMesma("");
+      setMostrarInputCustomizado(false);
+    }
+  }, [form.categoria]);
 
   const handleDataChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -301,10 +311,25 @@ export default memo(function DenunciaPage() {
         body: JSON.stringify({ code: codeToUse }),
       });
 
-      // Usar categoria customizada se for "outro"
-      const categoriaParaSalvar = mostrarInputCustomizado
+      // Se for categoria customizada, criar ela no BD
+      let categoriaParaSalvar = mostrarInputCustomizado
         ? categoriaMesma
         : form.categoria;
+
+      if (mostrarInputCustomizado && categoriaMesma) {
+        const catResponse = await fetch("/api/categorias", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nome: categoriaMesma }),
+        });
+
+        if (!catResponse.ok) {
+          throw new Error("Erro ao criar categoria customizada");
+        }
+
+        const catData = await catResponse.json();
+        categoriaParaSalvar = catData.nome;
+      }
 
       // Submeter denúncia
       const response = await fetch("/api/denuncia", {
@@ -376,6 +401,8 @@ export default memo(function DenunciaPage() {
               <Select
                 value={form.categoria}
                 onValueChange={handleCategoriaChange}
+                open={isSelectOpen}
+                onOpenChange={setIsSelectOpen}
               >
                 <SelectTrigger
                   className={`${errors.categoria ? "border-red-500" : "border-gray-400"} border-2 focus:border-black focus:ring-2 focus:ring-black/10 cursor-pointer w-full`}
@@ -400,7 +427,10 @@ export default memo(function DenunciaPage() {
                     className="flex items-center justify-between gap-2 px-2 py-1.5 hover:bg-accent cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setMostrarInputCustomizado(true);
+                      handleCategoriaChange("outro");
+                      if (categoriaMesma.length >= 6) {
+                        setIsSelectOpen(false);
+                      }
                     }}
                   >
                     <span className="text-sm">Outro</span>
@@ -413,13 +443,24 @@ export default memo(function DenunciaPage() {
                           e.stopPropagation();
                           setCategoriaMesma(e.target.value.slice(0, 30));
                         }}
+                        onKeyDown={(e) => {
+                          e.stopPropagation();
+                          if (e.key === "Enter" && categoriaMesma.length >= 6) {
+                            setForm((prev) => ({ ...prev, categoria: "outro" }));
+                          }
+                        }}
                         onClick={(e) => e.stopPropagation()}
-                        onKeyDown={(e) => e.stopPropagation()}
+                        onBlur={() => {
+                          if (categoriaMesma.length >= 6) {
+                            setForm((prev) => ({ ...prev, categoria: "outro" }));
+                          }
+                        }}
                         placeholder="Digite"
                         className="flex-1 px-0 py-0 text-sm border-0 border-b border-gray-400 focus:outline-none focus:ring-0 focus:border-blue-500 bg-transparent"
                         style={{
                           display: mostrarInputCustomizado ? "block" : "none",
                         }}
+                        autoFocus={mostrarInputCustomizado}
                       />
                       <span
                         className="text-xs text-gray-500 whitespace-nowrap"
