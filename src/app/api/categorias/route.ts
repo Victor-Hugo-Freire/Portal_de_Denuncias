@@ -13,12 +13,12 @@ export async function GET() {
   try {
     const client = await pool.connect();
     const result = await client.query(
-      "SELECT nome, descricao FROM categorias ORDER BY id",
+      "SELECT nome FROM categorias ORDER BY id",
     );
     client.release();
     const categorias = result.rows.map((row) => ({
       value: row.nome,
-      label: row.descricao,
+      label: row.nome,
     }));
     return NextResponse.json(categorias);
   } catch (error) {
@@ -55,8 +55,8 @@ export async function POST(request: NextRequest) {
     } else {
       // Criar nova categoria
       const insertResult = await client.query(
-        "INSERT INTO categorias (nome, descricao) VALUES ($1, $2) RETURNING id",
-        [nome.toLowerCase(), nome],
+        "INSERT INTO categorias (nome) VALUES ($1) RETURNING id",
+        [nome.toLowerCase()],
       );
       categoryId = insertResult.rows[0].id;
     }

@@ -5,8 +5,7 @@ CREATE TABLE usuarios (
 
 CREATE TABLE categorias (
   id SERIAL PRIMARY KEY,
-  nome VARCHAR(100) NOT NULL UNIQUE,
-  descricao TEXT
+  nome VARCHAR(100) NOT NULL UNIQUE
 );
 
 CREATE TABLE denuncias (
@@ -51,22 +50,22 @@ INSERT INTO usuarios (codigo) VALUES
 ('FGH45678'),
 ('IJK90123');
 
-INSERT INTO categorias (nome, descricao) VALUES
-('corrupcao', 'Corrupção'),
-('abuso_poder', 'Abuso de poder'),
-('fraude', 'Fraude'),
-('discriminacao', 'Discriminação'),
-('violacao_ambiental', 'Violação ambiental'),
-('violencia', 'Violência'),
-('peculato', 'Peculato'),
-('nepotismo', 'Nepotismo'),
-('desvio_dinheiro', 'Desvio de dinheiro público'),
-('falsa_identidade', 'Falsidade de identidade'),
-('extorsao', 'Extorsão'),
-('suborno', 'Suborno'),
-('falsificacao', 'Falsificação de documentos'),
-('assedio', 'Assédio moral ou sexual'),
-('evasao_fiscal', 'Evasão fiscal');
+INSERT INTO categorias (nome) VALUES
+('corrupcao'),
+('abuso_poder'),
+('fraude'),
+('discriminacao'),
+('violacao_ambiental'),
+('violencia'),
+('peculato'),
+('nepotismo'),
+('desvio_dinheiro'),
+('falsa_identidade'),
+('extorsao'),
+('suborno'),
+('falsificacao'),
+('assedio'),
+('evasao_fiscal');
 
 INSERT INTO denuncias (usuario_codigo, categoria_id, data_ocorrencia, estado, cidade, endereco, descricao, status)
 VALUES
