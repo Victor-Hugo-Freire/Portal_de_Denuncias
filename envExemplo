@@ -1,0 +1,5 @@
+PGUSER=Usuário do postgreSQL
+PGPASSWORD=senha do postgreSQL
+PGHOST=localhost
+PGDATABASE=portal_de_denuncias
+PGPORT=5432
